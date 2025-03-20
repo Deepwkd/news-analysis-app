@@ -1,19 +1,22 @@
+
 import streamlit as st
 import requests
 from textblob import TextBlob
 from gtts import gTTS
 import os
 import json
-from dotenv import load_dotenv
+from deep_translator import GoogleTranslator 
 
-# Load API key from .env file
-load_dotenv()
+# Reading API Key from Hugging Face Secrets
 API_KEY = os.getenv("NEWS_API_KEY")
 
-# Function to fetch news articles using NewsAPI
+if not API_KEY:
+    st.error("Error: NEWS_API_KEY not found. Set it in Hugging Face Secrets.")
+
+# to fetch news articles using NewsAPI
 def get_news_articles(company_name):
     if not API_KEY:
-        st.error("Error: NEWS_API_KEY not found. Set it in the .env file.")
+        st.error("Error: NEWS_API_KEY not found. Set it in the .env file or Hugging Face Secrets.")
         return []
     
     url = f"https://newsapi.org/v2/everything?q={company_name}&apiKey={API_KEY}"
@@ -38,26 +41,35 @@ def analyze_sentiment(text):
     else:
         return "Neutral"
 
-# Text-to-Speech conversion
+# Text-to-Speech conversion ( translation to Hindi using deep-translator)
 def text_to_speech(text):
-    tts = gTTS(text=text, lang='hi')
-    tts.save("summary.mp3")
-    return "summary.mp3"
+    try:
+        # Translating the text to Hindi using deep-translator
+        translated_text = GoogleTranslator(source='en', target='hi').translate(text)
+        
+        # Generate Hindi speech
+        tts = gTTS(text=translated_text, lang='hi')
+        tts.save("summary.mp3")
+        return "summary.mp3"
+    
+    except Exception as e:
+        st.error(f"Error in text-to-speech: {e}")
+        return None
 
 # Streamlit UI
-st.title("News Sentiment Analysis")
+st.title("🔍 News Sentiment Analysis")
 company_name = st.text_input("Enter Company Name:")
 
 if st.button("Fetch News & Analyze"):
     articles = get_news_articles(company_name)
     
     if not articles:
-        st.write("No articles found. Try another company name.")
+        st.write("⚠️ No articles found. Try another company name.")
     else:
         sentiment_counts = {"Positive": 0, "Negative": 0, "Neutral": 0}
         summarized_text = ""
         
-        st.subheader("News Articles")
+        st.subheader("📰 News Articles")
         for title, link, summary in articles:
             sentiment = analyze_sentiment(title)
             sentiment_counts[sentiment] += 1
@@ -66,14 +78,15 @@ if st.button("Fetch News & Analyze"):
             st.write(f"**Title:** {title}")
             st.write(f"**Summary:** {summary}")
             st.write(f"**Sentiment:** {sentiment}")
-            st.write(f"[Read More]({link})")
+            st.write(f"[🔗 Read More]({link})")
             st.write("---")
         
         # Comparative Analysis
-        st.subheader("Comparative Sentiment Analysis")
+        st.subheader("📊 Comparative Sentiment Analysis")
         st.json(sentiment_counts)
         
         # Text-to-Speech
-        st.subheader("Hindi Speech Output")
+        st.subheader("🗣️ Hindi Speech Output")
         speech_file = text_to_speech(summarized_text)
-        st.audio(speech_file, format='audio/mp3')
+        if speech_file:
+            st.audio(speech_file, format='audio/mp3')
