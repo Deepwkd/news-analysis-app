@@ -12,7 +12,13 @@ def analyze_sentiment(text):
     else:
         return "Neutral"
 
-def text_to_speech(text, filename="summary.mp3"):
-    tts = gTTS(text=text, lang='hi')
-    tts.save(filename)
-    return filename
+def text_to_speech(text):
+    try:
+        translated_text = GoogleTranslator(source='en', target='hi').translate(text)
+        tts = gTTS(text=translated_text, lang='hi')
+        tts.save("summary.mp3")
+        return "summary.mp3"
+    
+    except Exception as e:
+        st.error(f"Error in text-to-speech: {e}")
+        return None
