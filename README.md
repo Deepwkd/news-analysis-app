@@ -16,8 +16,8 @@ This project extracts, analyzes, and summarizes news articles about companies, p
 
 ### **🔹 Clone the Repository**
 ```bash
-git clone https://github.com/your-username/news-sentiment-analysis
-cd news-sentiment-analysis
+git clone https://github.com/your-username/news-analysis-app
+cd news-analysis-app
 ```
 
 ### **🔹 Install Dependencies**
