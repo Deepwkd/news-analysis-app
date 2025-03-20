@@ -3,3 +3,4 @@ requests
 textblob
 gtts
 python-dotenv
+deep-translator
