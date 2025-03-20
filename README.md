@@ -43,7 +43,7 @@ echo "API_KEY=your_api_key" > .env
  **📌 `requirements.txt` (Dependencies)**
 ```
 
-## 4️⃣ Run the Project Locally
+## **4️⃣ Run the Project Locally**
 
 ### 🔹 Start the Streamlit App
 
