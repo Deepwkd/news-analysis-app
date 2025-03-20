@@ -43,23 +43,23 @@ echo "API_KEY=your_api_key" > .env
  **📌 `requirements.txt` (Dependencies)**
 ```
 
-## **4️⃣ Run the Project Locally**
+## 4️⃣ Run the Project Locally
 
-### **🔹 Start the Streamlit App**
+### 🔹 Start the Streamlit App
 
-### **🔹 Start the API Backend**
+### 🔹 Start the API Backend
 
-## **5️⃣ Deploy on Hugging Face**
+## 5️⃣ Deploy on Hugging Face
 
-### **🔹 Clone the Hugging Face Space**
+### 🔹 Clone the Hugging Face Space
 
 
-### **🔹 Add API Key in Hugging Face Secrets**
+### 🔹 Add API Key in Hugging Face Secrets
 1. Go to **Settings** → **Secrets**.
 2. Add **API_KEY** with your API key.
 3. Restart the Hugging Face Space.
 
-###  **🔹 Test Your App on Hugging Face**
+###  🔹 Test Your App on Hugging Face
 Enter a company name (e.g., Tesla, Google).
 Click "Fetch News & Analyze".
 Make sure it:
