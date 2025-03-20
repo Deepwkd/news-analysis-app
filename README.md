@@ -34,13 +34,13 @@ echo "API_KEY=your_api_key" > .env
 
 ## **3️⃣ Code Files**
 
-### **📌 `app.py` (Main Streamlit App)**
+ **📌 `app.py` (Main Streamlit App)**
 
-### **📌 `api.py` (API Backend)**
+ **📌 `api.py` (API Backend)**
 
-### **📌 `utils.py` (Utility Functions)**
+ **📌 `utils.py` (Utility Functions)**
 
-### **📌 `requirements.txt` (Dependencies)**
+ **📌 `requirements.txt` (Dependencies)**
 ```
 
 ## **4️⃣ Run the Project Locally**
