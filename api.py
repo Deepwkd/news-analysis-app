@@ -1,10 +1,10 @@
 import os
 from flask import Flask, request, jsonify
 import requests
-from utils import analyze_sentiment  # Only sentiment function used
+from utils import analyze_sentiment  
 
 app = Flask(__name__)
-API_KEY = os.getenv("NEWS_API_KEY")  # Set this in Hugging Face Secrets
+API_KEY = os.getenv("NEWS_API_KEY")  #  Hugging Face Secret
 
 # Function to fetch news articles from NewsAPI
 def get_news(company_name):
