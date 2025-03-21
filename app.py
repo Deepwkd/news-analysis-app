@@ -1,92 +1,116 @@
-
 import streamlit as st
 import requests
-from textblob import TextBlob
 from gtts import gTTS
+from deep_translator import GoogleTranslator
+import threading
 import os
-import json
-from deep_translator import GoogleTranslator 
+from flask import Flask, request, jsonify
+from utils import analyze_sentiment
 
-# Reading API Key from Hugging Face Secrets
+# ------------------- Start Flask Backend (like api.py) ---------------------
+flask_app = Flask(__name__)
 API_KEY = os.getenv("NEWS_API_KEY")
 
-if not API_KEY:
-    st.error("Error: NEWS_API_KEY not found. Set it in Hugging Face Secrets.")
+@flask_app.route('/news', methods=['GET'])
+def news():
+    company = request.args.get('company')
+    if not company:
+        return jsonify({"error": "Missing company parameter"}), 400
 
-# to fetch news articles using NewsAPI
-def get_news_articles(company_name):
-    if not API_KEY:
-        st.error("Error: NEWS_API_KEY not found. Set it in the .env file or Hugging Face Secrets.")
-        return []
-    
-    url = f"https://newsapi.org/v2/everything?q={company_name}&apiKey={API_KEY}"
-    response = requests.get(url)
-    data = response.json()
-    
-    if "articles" not in data or not data["articles"]:
-        return []
-    
-    news_list = [(article["title"], article["url"], article.get("description", "No summary available")) for article in data["articles"][:10]]
-    return news_list
-
-# Sentiment analysis function
-def analyze_sentiment(text):
-    analysis = TextBlob(text)
-    sentiment_score = analysis.sentiment.polarity
-    
-    if sentiment_score > 0:
-        return "Positive"
-    elif sentiment_score < 0:
-        return "Negative"
-    else:
-        return "Neutral"
-
-# Text-to-Speech conversion ( translation to Hindi using deep-translator)
-def text_to_speech(text):
+    url = f"https://newsapi.org/v2/everything?q={company}&apiKey={API_KEY}"
     try:
-        # Translating the text to Hindi using deep-translator
-        translated_text = GoogleTranslator(source='en', target='hi').translate(text)
-        
-        # Generate Hindi speech
-        tts = gTTS(text=translated_text, lang='hi')
-        tts.save("summary.mp3")
-        return "summary.mp3"
-    
+        response = requests.get(url)
+        articles = response.json().get("articles", [])[:10]
     except Exception as e:
-        st.error(f"Error in text-to-speech: {e}")
-        return None
+        return jsonify({"error": str(e)}), 500
 
-# Streamlit UI
+    processed = []
+    for article in articles:
+        title = article.get("title", "No title")
+        summary = article.get("description", "No summary")
+        sentiment = analyze_sentiment(title)
+        processed.append({
+            "title": title,
+            "summary": summary,
+            "sentiment": sentiment,
+            "url": article.get("url", "#")
+        })
+    return jsonify(processed)
+
+def run_flask():
+    flask_app.run(host="0.0.0.0", port=5000)
+
+# Start Flask server in a thread
+threading.Thread(target=run_flask, daemon=True).start()
+
+# ------------------- Streamlit Frontend ---------------------
 st.title("🔍 News Sentiment Analysis")
 company_name = st.text_input("Enter Company Name:")
 
+def get_news_articles(company):
+    try:
+        url = f"http://localhost:5000/news?company={company}"
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        st.error(f"Failed to connect to backend API: {e}")
+        return []
+
+def generate_hindi_audio(titles, positive, negative, neutral, company):
+    try:
+        title_summary = "Top headlines include: " + "; ".join(titles[:5]) + "."
+        sentiment_summary = (
+            f"There are {positive} positive, {negative} negative, and {neutral} neutral articles "
+            f"about {company}. This shows a mixed sentiment in the media coverage."
+        )
+        full_summary = f"{title_summary} {sentiment_summary}"
+        translated = GoogleTranslator(source='en', target='hi').translate(full_summary)
+        tts = gTTS(text=translated, lang='hi')
+        tts.save("summary.mp3")
+        return "summary.mp3"
+    except Exception as e:
+        st.error(f"Text-to-speech error: {e}")
+        return None
+
 if st.button("Fetch News & Analyze"):
     articles = get_news_articles(company_name)
-    
     if not articles:
-        st.write("⚠️ No articles found. Try another company name.")
+        st.warning("⚠️ No articles found. Try another company.")
     else:
         sentiment_counts = {"Positive": 0, "Negative": 0, "Neutral": 0}
-        summarized_text = ""
-        
-        st.subheader("📰 News Articles")
-        for title, link, summary in articles:
-            sentiment = analyze_sentiment(title)
+        titles = []
+
+        st.markdown("#### 📄 Structured News Report")
+        for article in articles:
+            title = article["title"]
+            summary = article["summary"]
+            sentiment = article["sentiment"]
+            url = article["url"]
+
+            titles.append(title)
             sentiment_counts[sentiment] += 1
-            summarized_text += title + ". "
-            
-            st.write(f"**Title:** {title}")
-            st.write(f"**Summary:** {summary}")
-            st.write(f"**Sentiment:** {sentiment}")
-            st.write(f"[🔗 Read More]({link})")
-            st.write("---")
-        
-        # Comparative Analysis
-        st.subheader("📊 Comparative Sentiment Analysis")
-        st.json(sentiment_counts)
-        
-        # Text-to-Speech
-        st.subheader("🗣️ Hindi Speech Output")
-        speech_file = text_to_speech(summarized_text)
-        if speech_file:
-            st.audio(speech_file, format='audio/mp3')
+
+            st.markdown(f"""
+            <div style='font-size: 14px; line-height: 1.6;'>
+            <b>📰 Title:</b> {title}<br>
+            <b>📝 Summary:</b> {summary}<br>
+            <b>📊 Sentiment:</b> {sentiment}<br>
+            <b>🔗 <a href="{url}" target="_blank">Read Full Article</a></b>
+            </div>
+            <hr>
+            """, unsafe_allow_html=True)
+
+        st.markdown("#### 📊 Comparative Sentiment Analysis")
+        st.json({"Sentiment Distribution": sentiment_counts})
+
+        st.markdown("#### 🗣️ Hindi Speech Output")
+        audio = generate_hindi_audio(
+            titles,
+            sentiment_counts["Positive"],
+            sentiment_counts["Negative"],
+            sentiment_counts["Neutral"],
+            company_name
+        )
+        if audio:
+            st.audio(audio, format="audio/mp3")
