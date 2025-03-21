@@ -1,56 +1,50 @@
-
 import os
 from flask import Flask, request, jsonify
 import requests
-from utils import analyze_sentiment, translate_text  # Importing utility functions
+from utils import analyze_sentiment  # Only sentiment function used
 
 app = Flask(__name__)
-API_KEY = os.getenv("NEWS_API_KEY")  # Reads from Hugging Face Secrets
+API_KEY = os.getenv("NEWS_API_KEY")  # Set this in Hugging Face Secrets
 
-# Function to fetch news articles
+# Function to fetch news articles from NewsAPI
 def get_news(company_name):
-    """Fetch news articles from NewsAPI for a given company."""
     if not API_KEY:
-        return {"error": "API Key missing"}, 400
+        return {"error": "API Key missing"}
 
     url = f"https://newsapi.org/v2/everything?q={company_name}&apiKey={API_KEY}"
-    response = requests.get(url)
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            return {"error": f"Failed to fetch news. Status code: {response.status_code}"}
+        return response.json().get("articles", [])[:10]
+    except Exception as e:
+        return {"error": str(e)}
 
-    if response.status_code != 200:
-        return {"error": "Failed to fetch news"}, response.status_code
-
-    data = response.json()
-    articles = data.get("articles", [])
-    
-    result = []
-    for article in articles[:10]:  # Limiting to 10 articles
-        title = article.get("title", "No title available")
-        description = article.get("description", "No description available")
-        url = article.get("url", "")
-
-        sentiment = analyze_sentiment(title)  # Sentiment Analysis
-        translated_summary = translate_text(description)  # Translate summary to Hindi
-
-        result.append({
-            "title": title,
-            "summary": description,
-            "sentiment": sentiment,
-            "translated_summary": translated_summary,
-            "url": url
-        })
-    
-    return result
-
-# API Route to Fetch News and Perform Sentiment Analysis
+# API endpoint: GET /news
 @app.route('/news', methods=['GET'])
 def news():
-    """API endpoint to fetch news and analyze sentiment."""
     company = request.args.get('company')
     if not company:
         return jsonify({"error": "Missing company parameter"}), 400
-    
+
     articles = get_news(company)
-    return jsonify(articles)
+    if isinstance(articles, dict) and "error" in articles:
+        return jsonify(articles), 500
+
+    processed_articles = []
+    for article in articles:
+        title = article.get("title", "No title available")
+        summary = article.get("description", "No summary available")
+        sentiment = analyze_sentiment(title)
+
+        processed_articles.append({
+            "title": title,
+            "summary": summary,
+            "sentiment": sentiment,
+            "url": article.get("url", "#"),
+        })
+
+    return jsonify(processed_articles)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
