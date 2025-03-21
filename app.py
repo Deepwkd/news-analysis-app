@@ -7,7 +7,7 @@ import os
 from flask import Flask, request, jsonify
 from utils import analyze_sentiment
 
-# ------------------- Start Flask Backend (like api.py) ---------------------
+
 flask_app = Flask(__name__)
 API_KEY = os.getenv("NEWS_API_KEY")
 
